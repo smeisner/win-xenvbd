@@ -613,10 +613,11 @@ DriverEntry(
     HW_INITIALIZATION_DATA  InitData;
 
     Verbose ("STEVE : VERBOSE\n");
-    LogTrace ("STEVE : LogTrace\n");
     Trace ("STEVE : Trace\n");
-    LogTrace("===> RegistryPath = %p (0 == CRASHING)\n", RegistryPath);
-    LogTrace("===> (Irql=%d)\n", KeGetCurrentIrql());
+    Verbose("===> RegistryPath = %p (0 == CRASHING)\n", RegistryPath);
+    Verbose("===> (Irql=%d)\n", KeGetCurrentIrql());
+    Trace("===> RegistryPath = %p (0 == CRASHING)\n", RegistryPath);
+    Trace("===> (Irql=%d)\n", KeGetCurrentIrql());
 
     // RegistryPath == NULL if crashing!
     if (RegistryPath == NULL) {
