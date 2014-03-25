@@ -612,6 +612,12 @@ DriverEntry(
     UNICODE_STRING          Unicode;
     HW_INITIALIZATION_DATA  InitData;
 
+    Verbose ("STEVE : VERBOSE\n");
+    LogTrace ("STEVE : LogTrace\n");
+    Trace ("STEVE : Trace\n");
+    LogTrace("===> RegistryPath = %p (0 == CRASHING)\n", RegistryPath);
+    LogTrace("===> (Irql=%d)\n", KeGetCurrentIrql());
+
     // RegistryPath == NULL if crashing!
     if (RegistryPath == NULL) {
         return XencrshEntryPoint(_DriverObject);
