@@ -50,6 +50,49 @@
 #include "assert.h"
 #include "util.h"
 
+//
+// VCI Crash dump support
+//
+#include <Ntstrsafe.h>
+ULONG dump_run_count = 0;
+uint64_t dump_run_lba = 0;
+ULONG dump_run_sectors = 0;
+uint64_t next_dump_lba = 0;
+char dumpExtentPath[256];
+//@@@DUMP_CONFIG_DATA dumpConfigData;
+
+VOID
+XenVbd_LogDumpRun(
+PXENVBD_FRONTEND Frontend)
+{
+    LogTrace("Dump Run %d LBA %I64d sectors %d next lba %I64d\n",
+        dump_run_count,
+        dump_run_lba,
+        dump_run_sectors,
+        next_dump_lba);
+    RtlStringCbPrintfA(dumpExtentPath, sizeof(dumpExtentPath),
+        "crash-details/disk_extent/%d/LBA",
+        dump_run_count);
+    StorePrintf(
+        NULL,
+        Frontend->FrontendPath,
+        dumpExtentPath,
+        "%I64d",
+        dump_run_lba);
+    RtlStringCbPrintfA(dumpExtentPath, sizeof(dumpExtentPath),
+        "crash-details/disk_extent/%d/Blocks",
+        dump_run_count);
+    StorePrintf(
+        NULL,
+        Frontend->FrontendPath,
+        dumpExtentPath,
+        "%d",
+        dump_run_sectors);
+}
+//
+// End of VCI Crash dump support
+//
+
 typedef struct _XENVBD_SG_INDEX {
     ULONG       Index;
     ULONG       Offset;
@@ -724,6 +767,42 @@ PdoReadWrite(
         Srb->ScsiStatus = 0x40; // SCSI_ABORT
         return TRUE; // Complete now
     }
+
+    //
+    // VCI Crash dump support
+    //
+    if (Srb->Function == SCSIOP_WRITE)
+    {
+        StoreWrite(NULL, "", "control/test", "Test");
+        LogTrace("------ dump_run_lba = %ld\n", dump_run_lba);
+        LogTrace("------ Cdb_LogicalBlock() = %d\n", Cdb_LogicalBlock(Srb));
+        LogTrace("------ Cdb_TransferBlock() = %d\n", Cdb_TransferBlock(Srb));
+        if (dump_run_lba == 0)
+        {
+            // init the dump run list
+            dump_run_lba = Cdb_LogicalBlock(Srb);
+            dump_run_sectors = Cdb_TransferBlock(Srb);
+            next_dump_lba = dump_run_lba + Cdb_TransferBlock(Srb);
+        }
+        else if (Cdb_LogicalBlock(Srb) != next_dump_lba)
+        {
+            // print the current run, set the next run 
+            XenVbd_LogDumpRun(&Pdo->Frontend);
+            dump_run_count++;
+            dump_run_lba = Cdb_LogicalBlock(Srb);
+            dump_run_sectors = Cdb_TransferBlock(Srb);
+            next_dump_lba = dump_run_lba + Cdb_TransferBlock(Srb);
+        }
+        else
+        {
+            // add to the current run
+            dump_run_sectors += Cdb_TransferBlock(Srb);
+            next_dump_lba += Cdb_TransferBlock(Srb);
+        }
+    }
+    //
+    // End  VCI Crash dump support
+    //
 
     Status = PrepareReadWrite(Pdo, Srb);
     if (NT_SUCCESS(Status)) {
