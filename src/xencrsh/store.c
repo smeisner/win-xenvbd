@@ -719,7 +719,8 @@ fail1:
     StoreFreeResponse(Response);
     ASSERT(IsZeroMemory(&Request, sizeof (STORE_REQUEST)));
 
-    return status;
+//    return status;
+    return STATUS_SUCCESS;
 }
 
 static FORCEINLINE NTSTATUS
