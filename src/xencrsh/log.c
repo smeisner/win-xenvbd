@@ -35,6 +35,7 @@
 #include <stdio.h>
 
 static PVOID Port12 = ((PVOID)(ULONG_PTR)0x12);
+static PVOID Port402 = ((PVOID)(ULONG_PTR)0x402);
 
 static DECLSPEC_NOINLINE VOID
 LogQemuPut(
@@ -42,6 +43,7 @@ LogQemuPut(
     )
 {
     WRITE_PORT_UCHAR(Port12, (UCHAR)Char);
+    WRITE_PORT_UCHAR(Port402, (UCHAR)Char);
 }
 
 static DECLSPEC_NOINLINE PCHAR
