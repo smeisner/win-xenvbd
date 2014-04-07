@@ -59,15 +59,10 @@ uint64_t dump_run_lba = 0;
 ULONG dump_run_sectors = 0;
 uint64_t next_dump_lba = 0;
 char dumpExtentPath[256];
-//@@@DUMP_CONFIG_DATA dumpConfigData;
 
 VOID
-XenVbd_LogDumpRun(
-    PXENVBD_FRONTEND Frontend
-    )
+XenVbd_LogDumpRun()
 {
-    UNREFERENCED_PARAMETER(Frontend);
-
     LogTrace("Dump Run %d LBA %I64d sectors %d next lba %I64d\n",
         dump_run_count,
         dump_run_lba,
@@ -141,11 +136,18 @@ void UpdateVciCrashDump(
         dump_run_lba = Cdb_LogicalBlock(Srb);
         dump_run_sectors = Cdb_TransferBlock(Srb);
         next_dump_lba = dump_run_lba + Cdb_TransferBlock(Srb);
+        // indicate which disk is used for crash dump
+        StorePrintf(
+            NULL,
+            NULL,
+            "crash-details/disk_path",
+            "%s",
+            Pdo->Frontend.FrontendPath);
     }
     else if (Cdb_LogicalBlock(Srb) != next_dump_lba)
     {
         // print the current run, set the next run 
-        XenVbd_LogDumpRun(&Pdo->Frontend);
+        XenVbd_LogDumpRun();
         dump_run_count++;
         dump_run_lba = Cdb_LogicalBlock(Srb);
         dump_run_sectors = Cdb_TransferBlock(Srb);
@@ -1242,7 +1244,7 @@ PdoStartIo(
 
     case SRB_FUNCTION_SHUTDOWN:
         LogVerbose("SRB_FUNCTION_SHUTDOWN\n");
-        XenVbd_LogDumpRun(&Pdo->Frontend);
+        XenVbd_LogDumpRun();
         __DisplayStats(Pdo);
         PdoQueueShutdown(Pdo, Srb);
         return FALSE;
