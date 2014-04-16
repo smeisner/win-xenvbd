@@ -39,22 +39,25 @@
 
 // Segments - extension of blkif_segment_t
 typedef struct _XENVBD_SEGMENT {
-    ULONG               GrantRef;
+    PVOID               Grant;
     UCHAR               FirstSector;
     UCHAR               LastSector;
+} XENVBD_SEGMENT, *PXENVBD_SEGMENT;
 
+typedef struct _XENVBD_MAPPING {
     PVOID               BufferId;
     PVOID               Buffer; // VirtAddr mapped to PhysAddr(s)
     ULONG               Length;
     MDL                 Mdl;
     PFN_NUMBER          Pfn[2];
-} XENVBD_SEGMENT, *PXENVBD_SEGMENT;
+} XENVBD_MAPPING, *PXENVBD_MAPPING;
 
 // Request - extension of blkif_request_t
 typedef struct _XENVBD_REQUEST_READWRITE {
     UCHAR               NrSegments;
     ULONG64             FirstSector;
     XENVBD_SEGMENT      Segments[BLKIF_MAX_SEGMENTS_PER_REQUEST];
+    XENVBD_MAPPING      Mappings[BLKIF_MAX_SEGMENTS_PER_REQUEST];
 } XENVBD_REQUEST_READWRITE, *PXENVBD_REQUEST_READWRITE;
 
 typedef struct _XENVBD_REQUEST_BARRIER {
@@ -67,6 +70,15 @@ typedef struct _XENVBD_REQUEST_DISCARD {
     ULONG64             NrSectors;
 } XENVBD_REQUEST_DISCARD, *PXENVBD_REQUEST_DISCARD;
 
+typedef struct _XENVBD_REQUEST_INDIRECT {
+    UCHAR               Operation;  // BLKIF_OP_{READ/WRITE}
+    USHORT              NrSegments; // 1-4096
+    ULONG64             FirstSector;
+    PVOID               Grants[BLKIF_MAX_INDIRECT_PAGES_PER_REQUEST];
+    PXENVBD_SEGMENT     Segments[BLKIF_MAX_INDIRECT_PAGES_PER_REQUEST];
+    PXENVBD_MAPPING     Mappings[BLKIF_MAX_INDIRECT_PAGES_PER_REQUEST];
+} XENVBD_REQUEST_INDIRECT, *PXENVBD_REQUEST_INDIRECT;
+
 typedef struct _XENVBD_REQUEST {
     PSCSI_REQUEST_BLOCK Srb;
     LIST_ENTRY          Entry;
@@ -77,6 +89,7 @@ typedef struct _XENVBD_REQUEST {
         XENVBD_REQUEST_BARRIER      Barrier;    // BLKIF_OP_WRITE_BARRIER
         // nothing                              // BLKIF_OP_FLUSH_DISKCACHE
         XENVBD_REQUEST_DISCARD      Discard;    // BLKIF_OP_DISCARD
+        XENVBD_REQUEST_INDIRECT     Indirect;   // BLKIF_OP_INDIRECT
     } u;
 } XENVBD_REQUEST, *PXENVBD_REQUEST;
 
